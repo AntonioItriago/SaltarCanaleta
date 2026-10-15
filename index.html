@@ -11,18 +11,22 @@
   html, body {
     width: 100%; height: 100%; overflow: hidden;
     background: #1a1a2e; font-family: 'Arial Black', sans-serif;
-    /* FIX: quitamos touch-action: none del body */
   }
   #gameContainer {
     position: relative; width: 100vw; height: 100vh;
     background: linear-gradient(180deg, #2c3e50 0%, #4a6572 60%, #34495e 100%);
     overflow: hidden;
   }
+  /* FIX CRÍTICO: canvas sin pointer-events por defecto */
   canvas { 
     display: block; width: 100%; height: 100%; 
-    /* FIX: touch-action solo en el canvas */
-    touch-action: none; 
+    pointer-events: none;
     user-select: none;
+  }
+  /* Solo activo durante el juego */
+  canvas.active {
+    pointer-events: auto;
+    touch-action: none;
   }
 
   .overlay {
@@ -31,7 +35,6 @@
     background: rgba(0,0,0,0.85); color: white; z-index: 10;
     backdrop-filter: blur(6px);
     overflow-y: auto; padding: 20px 15px;
-    /* FIX: permitir clicks en los overlays */
     pointer-events: auto;
   }
   .overlay.centered { justify-content: center; }
@@ -44,21 +47,20 @@
   }
   .subtitle { font-size: 0.95em; color: #ecf0f1; margin-bottom: 15px; text-align: center; padding: 0 10px; }
 
-  /* FIX: botones con pointer-events y cursor explícitos */
+  /* FIX CRÍTICO: botones con onclick inline y estilos robustos */
   .btn {
     padding: 13px 30px; font-size: 1.1em; font-weight: bold;
     background: linear-gradient(135deg, #e74c3c, #c0392b);
     color: white; border: 3px solid #ffd700; border-radius: 15px;
     cursor: pointer; margin: 6px; 
     box-shadow: 0 5px 0 #7f1d1d, 0 7px 12px rgba(0,0,0,0.5);
-    transition: transform 0.1s; letter-spacing: 1px;
+    letter-spacing: 1px;
     min-width: 180px;
-    pointer-events: auto;
-    touch-action: manipulation;
-    user-select: none;
-    -webkit-user-select: none;
     position: relative;
     z-index: 20;
+    outline: none;
+    -webkit-appearance: none;
+    appearance: none;
   }
   .btn:active { transform: translateY(3px); box-shadow: 0 2px 0 #7f1d1d; }
   .btn.green { background: linear-gradient(135deg, #27ae60, #1e8449); box-shadow: 0 5px 0 #145a32, 0 7px 12px rgba(0,0,0,0.5); }
@@ -144,30 +146,19 @@
   .tip-box p { font-size: 0.85em !important; }
 
   .buttons-row { display: flex; flex-wrap: wrap; justify-content: center; gap: 5px; width: 100%; }
-
-  /* FIX: indicador visual de debug (opcional, quitar después) */
-  .debug-toast {
-    position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
-    background: rgba(0,0,0,0.9); color: #ffd700; padding: 15px 25px;
-    border-radius: 10px; font-size: 1.2em; z-index: 9999;
-    pointer-events: none; opacity: 0; transition: opacity 0.3s;
-  }
-  .debug-toast.show { opacity: 1; }
 </style>
 </head>
 <body>
 <div id="gameContainer">
+  <!-- FIX: canvas sin clase active al inicio -->
   <canvas id="gameCanvas"></canvas>
 
   <div class="hud hidden" id="hud">
     <div class="score-box">🏃 <span id="scoreDisplay">0</span> m</div>
-    <div class="score-box">🏆 <span id="highScoreDisplay">0</span></div>
+    <div class="score-box"> <span id="highScoreDisplay">0</span></div>
   </div>
 
   <div class="beat-indicator" id="beatIndicator"></div>
-
-  <!-- DEBUG TOAST -->
-  <div class="debug-toast" id="debugToast"></div>
 
   <!-- ============ PANTALLA DE INICIO ============ -->
   <div class="overlay" id="startScreen">
@@ -178,8 +169,9 @@
       <div>🏆 Mejor Puntaje: <span class="highlight" id="menuHighScore">0</span> m</div>
     </div>
     <div class="buttons-row">
-      <button class="btn green" id="startBtn" type="button">▶ JUGAR</button>
-      <button class="btn yellow" id="helpBtn" type="button">❓ AYUDA</button>
+      <!-- FIX CRÍTICO: onclick inline como método principal -->
+      <button class="btn green" id="startBtn" onclick="handleStart()" type="button">▶ JUGAR</button>
+      <button class="btn yellow" id="helpBtn" onclick="handleHelp()" type="button">❓ AYUDA</button>
     </div>
   </div>
 
@@ -189,12 +181,12 @@
 
     <div class="help-container">
       <div class="help-section">
-        <h3> Objetivo</h3>
+        <h3>🎯 Objetivo</h3>
         <p>Corre lo más lejos posible esquivando obstáculos urbanos (canaletas, charcos, alcantarillas y baches). ¡Sobrevive al ritmo de la música!</p>
       </div>
 
       <div class="help-section">
-        <h3> Controles</h3>
+        <h3>🎮 Controles</h3>
         <div class="control-box">
           <div class="control-icon">👆</div>
           <div class="control-text"><strong>Tap / Click:</strong> Salto corto. Úsalo para obstáculos pequeños.</div>
@@ -218,7 +210,7 @@
             <div class="desc">Agua corriendo. ¡Salta!</div>
           </div>
           <div class="obstacle-item">
-            <div class="emoji">💧</div>
+            <div class="emoji"></div>
             <div class="name">Charco</div>
             <div class="desc">Bajo y ancho. Salto largo.</div>
           </div>
@@ -258,12 +250,12 @@
           <li>🎵 Escucha el ritmo: los obstáculos siguen el beat.</li>
           <li>⏱️ La velocidad aumenta con el tiempo, ¡no te confíes!</li>
           <li>🦘 Usa el doble salto para obstáculos difíciles.</li>
-          <li> Guarda tu revivir para cuando lleves un buen puntaje.</li>
+          <li>📺 Guarda tu revivir para cuando lleves un buen puntaje.</li>
         </ul>
       </div>
     </div>
 
-    <button class="btn green" id="closeHelpBtn" type="button" style="width:100%; max-width:300px;">✅ ENTENDIDO</button>
+    <button class="btn green" id="closeHelpBtn" onclick="handleCloseHelp()" type="button" style="width:100%; max-width:300px;">✅ ENTENDIDO</button>
   </div>
 
   <!-- ============ PANTALLA DE GAME OVER ============ -->
@@ -275,8 +267,8 @@
       <div>Mejor: <span class="highlight" id="finalHighScore">0</span> m</div>
       <div id="newRecord" class="hidden" style="color:#ffd700; font-size:1.1em; margin-top:8px;">🎉 ¡NUEVO RÉCORD! 🎉</div>
     </div>
-    <button class="btn blue hidden" id="reviveBtn" type="button"> REVIVIR</button>
-    <button class="btn" id="restartBtn" type="button">🔄 REINTENTAR</button>
+    <button class="btn blue hidden" id="reviveBtn" onclick="handleRevive()" type="button">📺 REVIVIR</button>
+    <button class="btn" id="restartBtn" onclick="handleRestart()" type="button"> REINTENTAR</button>
   </div>
 
   <!-- ============ PANTALLA DE ANUNCIO ============ -->
@@ -301,16 +293,6 @@ if (tg) {
     tg.setBackgroundColor('#1a1a2e');
     tg.enableClosingConfirmation();
   } catch(e){ console.warn('Telegram init error:', e); }
-}
-
-// ============================================================
-// DEBUG HELPER
-// ============================================================
-function showToast(msg) {
-  const t = document.getElementById('debugToast');
-  t.textContent = msg;
-  t.classList.add('show');
-  setTimeout(() => t.classList.remove('show'), 1500);
 }
 
 // ============================================================
@@ -511,7 +493,7 @@ function playSFX(type) {
 }
 
 // ============================================================
-// CONTROLES DEL JUEGO (solo en canvas)
+// CONTROLES DEL JUEGO (SOLO CUANDO CANVAS ESTÁ ACTIVO)
 // ============================================================
 let lastTapTime = 0;
 const DOUBLE_TAP_DELAY = 250;
@@ -538,10 +520,10 @@ function handleJump(isLong) {
   }
 }
 
-// FIX: solo prevenir default en el canvas, no globalmente
+// FIX: listener solo en canvas, y solo funciona cuando canvas tiene clase 'active'
 canvas.addEventListener('touchstart', (e) => {
+  if (!canvas.classList.contains('active')) return;
   e.preventDefault();
-  e.stopPropagation();
   const now = Date.now();
   if (now - lastTapTime < DOUBLE_TAP_DELAY) {
     handleJump(true); lastTapTime = 0;
@@ -554,7 +536,7 @@ canvas.addEventListener('touchstart', (e) => {
 }, { passive: false });
 
 canvas.addEventListener('mousedown', (e) => {
-  e.stopPropagation();
+  if (!canvas.classList.contains('active')) return;
   const now = Date.now();
   if (now - lastTapTime < DOUBLE_TAP_DELAY) {
     handleJump(true); lastTapTime = 0;
@@ -857,6 +839,8 @@ function gameOver() {
   gameState = STATE.GAMEOVER;
   stopMusic();
   playSFX('hit');
+  // FIX: desactivar canvas
+  canvas.classList.remove('active');
 
   for (let i = 0; i < 20; i++) {
     particles.push({
@@ -886,8 +870,48 @@ function gameOver() {
   document.getElementById('gameOverScreen').classList.remove('hidden');
 }
 
-function revivePlayer() {
-  showToast('📺 Cargando anuncio...');
+// ============================================================
+// HANDLERS DE BOTONES (FUNCIONES GLOBALES para onclick inline)
+// ============================================================
+function handleStart() {
+  console.log('▶ JUGAR presionado');
+  resetGame();
+  gameState = STATE.PLAYING;
+  // FIX: activar canvas para recibir toques
+  canvas.classList.add('active');
+  document.getElementById('startScreen').classList.add('hidden');
+  document.getElementById('hud').classList.remove('hidden');
+  document.getElementById('highScoreDisplay').textContent = highScore;
+  startMusic();
+  if (tg?.HapticFeedback) {
+    try { tg.HapticFeedback.impactOccurred('medium'); } catch(e){}
+  }
+}
+
+function handleHelp() {
+  console.log('❓ AYUDA presionado');
+  document.getElementById('startScreen').classList.add('hidden');
+  document.getElementById('helpScreen').classList.remove('hidden');
+}
+
+function handleCloseHelp() {
+  console.log('✅ ENTENDIDO presionado');
+  document.getElementById('helpScreen').classList.add('hidden');
+  document.getElementById('startScreen').classList.remove('hidden');
+}
+
+function handleRestart() {
+  console.log(' REINTENTAR presionado');
+  if (interstitialReady) {
+    interstitialReady = false;
+    showInterstitial(() => actuallyReturnToMenu());
+  } else {
+    actuallyReturnToMenu();
+  }
+}
+
+function handleRevive() {
+  console.log('📺 REVIVIR presionado');
   showRewardedAd(() => {
     gameState = STATE.PLAYING;
     canRevive = false;
@@ -897,6 +921,8 @@ function revivePlayer() {
     player.vy = 0;
     player.grounded = true;
     obstacles = obstacles.filter(ob => ob.x > player.x + 200);
+    // FIX: reactivar canvas
+    canvas.classList.add('active');
     document.getElementById('gameOverScreen').classList.add('hidden');
     document.getElementById('hud').classList.remove('hidden');
     startMusic();
@@ -907,31 +933,11 @@ function revivePlayer() {
   });
 }
 
-function startGame() {
-  showToast('🎮 ¡Jugando!');
-  resetGame();
-  gameState = STATE.PLAYING;
-  document.getElementById('startScreen').classList.add('hidden');
-  document.getElementById('hud').classList.remove('hidden');
-  document.getElementById('highScoreDisplay').textContent = highScore;
-  startMusic();
-  if (tg?.HapticFeedback) {
-    try { tg.HapticFeedback.impactOccurred('medium'); } catch(e){}
-  }
-}
-
-function returnToMenu() {
-  if (interstitialReady) {
-    interstitialReady = false;
-    showInterstitial(() => actuallyReturnToMenu());
-  } else {
-    actuallyReturnToMenu();
-  }
-}
-
 function actuallyReturnToMenu() {
   gameState = STATE.MENU;
   stopMusic();
+  // FIX: desactivar canvas
+  canvas.classList.remove('active');
   document.getElementById('gameOverScreen').classList.add('hidden');
   document.getElementById('hud').classList.add('hidden');
   document.getElementById('menuHighScore').textContent = highScore;
@@ -997,44 +1003,6 @@ function showInterstitial(onComplete) {
 }
 
 // ============================================================
-// FIX: EVENT LISTENERS DE BOTONES CON SOPORTE TÁCTIL Y CLICK
-// ============================================================
-function bindButton(id, handler) {
-  const btn = document.getElementById(id);
-  if (!btn) return;
-  
-  // FIX: usar tanto click como touchend para máxima compatibilidad
-  btn.addEventListener('click', (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    console.log('Click en:', id);
-    handler();
-  });
-  
-  btn.addEventListener('touchend', (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    console.log('Touchend en:', id);
-    handler();
-  }, { passive: false });
-}
-
-bindButton('startBtn', startGame);
-bindButton('helpBtn', () => {
-  document.getElementById('startScreen').classList.add('hidden');
-  document.getElementById('helpScreen').classList.remove('hidden');
-});
-bindButton('closeHelpBtn', () => {
-  document.getElementById('helpScreen').classList.add('hidden');
-  document.getElementById('startScreen').classList.remove('hidden');
-});
-bindButton('restartBtn', returnToMenu);
-bindButton('reviveBtn', revivePlayer);
-
-// FIX: NO usar preventDefault global en touchmove
-// Solo prevenir en el canvas (ya está arriba)
-
-// ============================================================
 // GAME LOOP
 // ============================================================
 let lastTime = performance.now();
@@ -1053,8 +1021,9 @@ player.y = player.groundY - player.h;
 document.getElementById('menuHighScore').textContent = highScore;
 requestAnimationFrame(gameLoop);
 
-console.log('%c🌧️ Saltar la Canaleta ‍♂️', 'font-size: 20px; color: #ffd700; font-weight: bold;');
+console.log('%c️ Saltar la Canaleta 🏃‍♂️', 'font-size: 20px; color: #ffd700; font-weight: bold;');
 console.log('✅ Botones corregidos - Monetag Zone: 12035176');
+console.log('Canvas activo solo durante el juego');
 </script>
 </body>
 </html>
