@@ -144,7 +144,6 @@
 
   .buttons-row { display: flex; flex-wrap: wrap; justify-content: center; gap: 5px; width: 100%; }
 
-  /* Debug overlay */
   #debugOverlay {
     position: fixed; top: 10px; right: 10px;
     background: rgba(0,0,0,0.9); color: #0f0;
@@ -161,22 +160,20 @@
   <canvas id="gameCanvas"></canvas>
 
   <div class="hud hidden" id="hud">
-    <div class="score-box">🏃 <span id="scoreDisplay">0</span> m</div>
+    <div class="score-box"> <span id="scoreDisplay">0</span> m</div>
     <div class="score-box">🏆 <span id="highScoreDisplay">0</span></div>
   </div>
 
   <div class="beat-indicator" id="beatIndicator"></div>
 
-  <!-- Debug overlay -->
   <div id="debugOverlay"></div>
 
-  <!-- ============ PANTALLA DE INICIO ============ -->
   <div class="overlay" id="startScreen">
     <img src="banner.jpg" alt="Saltar la Canaleta" class="banner-img" onerror="this.style.display='none'">
     <div class="title">SALTAR LA CANALETA</div>
     <div class="subtitle">¡Esquiva las canaletas al ritmo de la música!</div>
     <div class="stats">
-      <div>🏆 Mejor Puntaje: <span class="highlight" id="menuHighScore">0</span> m</div>
+      <div> Mejor Puntaje: <span class="highlight" id="menuHighScore">0</span> m</div>
     </div>
     <div class="buttons-row">
       <button class="btn green" id="startBtn" onclick="handleStart()" type="button">▶ JUGAR</button>
@@ -184,9 +181,8 @@
     </div>
   </div>
 
-  <!-- ============ PANTALLA DE AYUDA ============ -->
   <div class="overlay hidden" id="helpScreen">
-    <div class="title" style="font-size:1.6em;"> CÓMO JUGAR</div>
+    <div class="title" style="font-size:1.6em;">📖 CÓMO JUGAR</div>
 
     <div class="help-container">
       <div class="help-section">
@@ -197,15 +193,15 @@
       <div class="help-section">
         <h3>🎮 Controles</h3>
         <div class="control-box">
-          <div class="control-icon">👆</div>
+          <div class="control-icon"></div>
           <div class="control-text"><strong>Tap / Click:</strong> Salto corto. Úsalo para obstáculos pequeños.</div>
         </div>
         <div class="control-box">
-          <div class="control-icon">👆</div>
+          <div class="control-icon">👆👆</div>
           <div class="control-text"><strong>Doble Tap:</strong> Salto largo. Ideal para obstáculos grandes o grupos.</div>
         </div>
         <div class="control-box">
-          <div class="control-icon">🦘</div>
+          <div class="control-icon"></div>
           <div class="control-text"><strong>Doble Salto:</strong> Toca otra vez en el aire para ganar altura extra.</div>
         </div>
       </div>
@@ -240,16 +236,16 @@
         <h3>⭐ Puntuación</h3>
         <p>Cada metro recorrido suma puntos. La velocidad aumenta progresivamente, ¡así que mantente alerta!</p>
         <div class="tip-box">
-          <p> <strong>Tip:</strong> Los obstáculos aparecen al ritmo de la música (120 BPM). ¡Siente el beat para anticipar los saltos!</p>
+          <p>💡 <strong>Tip:</strong> Los obstáculos aparecen al ritmo de la música (120 BPM). ¡Siente el beat para anticipar los saltos!</p>
         </div>
       </div>
 
       <div class="help-section">
-        <h3>💀 Game Over y Revivir</h3>
+        <h3> Game Over y Revivir</h3>
         <p>Si chocas con un obstáculo, pierdes. Pero puedes <strong style="color:#ffd700;">REVIVIR UNA VEZ</strong> por partida viendo un anuncio corto.</p>
         <p>Al revivir tendrás <strong style="color:#ffd700;">3 segundos de invulnerabilidad</strong> para escapar.</p>
         <div class="tip-box">
-          <p>⚠️ <strong>Ojo:</strong> Solo puedes revivir <strong>una vez por partida</strong>. ¡Úsalo sabiamente!</p>
+          <p>️ <strong>Ojo:</strong> Solo puedes revivir <strong>una vez por partida</strong>. ¡Úsalo sabiamente!</p>
         </div>
       </div>
 
@@ -267,20 +263,18 @@
     <button class="btn green" id="closeHelpBtn" onclick="handleCloseHelp()" type="button" style="width:100%; max-width:300px;">✅ ENTENDIDO</button>
   </div>
 
-  <!-- ============ PANTALLA DE GAME OVER ============ -->
   <div class="overlay centered hidden" id="gameOverScreen">
-    <div class="emoji">💥</div>
+    <div class="emoji">💥🌊</div>
     <div class="title" style="font-size:1.6em;">¡TE CAÍSTE!</div>
     <div class="stats">
       <div>Distancia: <span class="highlight" id="finalScore">0</span> m</div>
       <div>Mejor: <span class="highlight" id="finalHighScore">0</span> m</div>
-      <div id="newRecord" class="hidden" style="color:#ffd700; font-size:1.1em; margin-top:8px;"> ¡NUEVO RÉCORD! 🎉</div>
+      <div id="newRecord" class="hidden" style="color:#ffd700; font-size:1.1em; margin-top:8px;">🎉 ¡NUEVO RÉCORD! 🎉</div>
     </div>
     <button class="btn blue hidden" id="reviveBtn" onclick="handleRevive()" type="button">📺 REVIVIR</button>
     <button class="btn" id="restartBtn" onclick="handleRestart()" type="button">🔄 REINTENTAR</button>
   </div>
 
-  <!-- ============ PANTALLA DE ANUNCIO ============ -->
   <div class="overlay centered hidden" id="adScreen">
     <div class="emoji">📺</div>
     <div class="title" style="font-size:1.5em;">CARGANDO ANUNCIO</div>
@@ -325,13 +319,21 @@ const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 let W, H;
 
+// ============================================================
+// FIX: Definir player ANTES de resize()
+// ============================================================
+const player = {
+  x: 80, y: 0, w: 50, h: 70,
+  vy: 0, jumping: false, doubleJumped: false,
+  grounded: true, groundY: 0,
+  runFrame: 0, runTimer: 0
+};
+
 function resize() {
   W = canvas.width = window.innerWidth;
   H = canvas.height = window.innerHeight;
-  if (player) {
-    player.groundY = H - 120;
-    if (player.grounded) player.y = player.groundY - player.h;
-  }
+  player.groundY = H - 120;
+  if (player.grounded) player.y = player.groundY - player.h;
 }
 resize();
 window.addEventListener('resize', resize);
@@ -358,16 +360,6 @@ const BPM = 120;
 const BEAT_INTERVAL = 60000 / BPM;
 let lastBeatTime = 0;
 let beatPhase = 0;
-
-// ============================================================
-// JUGADOR
-// ============================================================
-const player = {
-  x: 80, y: 0, w: 50, h: 70,
-  vy: 0, jumping: false, doubleJumped: false,
-  grounded: true, groundY: 0,
-  runFrame: 0, runTimer: 0
-};
 
 // ============================================================
 // OBSTÁCULOS
@@ -899,7 +891,7 @@ function gameOver() {
 }
 
 // ============================================================
-// HANDLERS DE BOTONES CON TRY/CATCH
+// HANDLERS DE BOTONES
 // ============================================================
 function handleStart() {
   try {
@@ -924,10 +916,10 @@ function handleStart() {
 
 function handleHelp() {
   try {
-    debug(' handleHelp called');
+    debug('❓ handleHelp called');
     document.getElementById('startScreen').classList.add('hidden');
     document.getElementById('helpScreen').classList.remove('hidden');
-    debug(' handleHelp done');
+    debug('❓ handleHelp done');
   } catch(e) {
     debug('ERROR en handleHelp: ' + e.message);
   }
@@ -961,7 +953,7 @@ function handleRestart() {
 
 function handleRevive() {
   try {
-    debug(' handleRevive called');
+    debug('📺 handleRevive called');
     showRewardedAd(() => {
       gameState = STATE.PLAYING;
       canRevive = false;
@@ -1074,14 +1066,12 @@ function gameLoop(now) {
 
 // Inicializar
 initEnvironment();
-player.groundY = H - 120;
-player.y = player.groundY - player.h;
 document.getElementById('menuHighScore').textContent = highScore;
 requestAnimationFrame(gameLoop);
 
-debug('App iniciada');
+debug('App iniciada - player definido antes de resize()');
 console.log('%c🌧️ Saltar la Canaleta 🏃‍♂️', 'font-size: 20px; color: #ffd700; font-weight: bold;');
-console.log('✅ Debug activo - Monetag Zone: 12035176');
+console.log('✅ Fix aplicado: player definido antes de resize()');
 </script>
 </body>
 </html>
