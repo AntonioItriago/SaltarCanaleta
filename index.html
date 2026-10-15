@@ -17,13 +17,11 @@
     background: linear-gradient(180deg, #2c3e50 0%, #4a6572 60%, #34495e 100%);
     overflow: hidden;
   }
-  /* FIX CRÍTICO: canvas sin pointer-events por defecto */
   canvas { 
     display: block; width: 100%; height: 100%; 
     pointer-events: none;
     user-select: none;
   }
-  /* Solo activo durante el juego */
   canvas.active {
     pointer-events: auto;
     touch-action: none;
@@ -47,7 +45,6 @@
   }
   .subtitle { font-size: 0.95em; color: #ecf0f1; margin-bottom: 15px; text-align: center; padding: 0 10px; }
 
-  /* FIX CRÍTICO: botones con onclick inline y estilos robustos */
   .btn {
     padding: 13px 30px; font-size: 1.1em; font-weight: bold;
     background: linear-gradient(135deg, #e74c3c, #c0392b);
@@ -146,19 +143,32 @@
   .tip-box p { font-size: 0.85em !important; }
 
   .buttons-row { display: flex; flex-wrap: wrap; justify-content: center; gap: 5px; width: 100%; }
+
+  /* Debug overlay */
+  #debugOverlay {
+    position: fixed; top: 10px; right: 10px;
+    background: rgba(0,0,0,0.9); color: #0f0;
+    padding: 10px; border-radius: 5px;
+    font-family: monospace; font-size: 12px;
+    z-index: 9999; max-width: 300px;
+    display: none;
+  }
+  #debugOverlay.show { display: block; }
 </style>
 </head>
 <body>
 <div id="gameContainer">
-  <!-- FIX: canvas sin clase active al inicio -->
   <canvas id="gameCanvas"></canvas>
 
   <div class="hud hidden" id="hud">
     <div class="score-box">🏃 <span id="scoreDisplay">0</span> m</div>
-    <div class="score-box"> <span id="highScoreDisplay">0</span></div>
+    <div class="score-box">🏆 <span id="highScoreDisplay">0</span></div>
   </div>
 
   <div class="beat-indicator" id="beatIndicator"></div>
+
+  <!-- Debug overlay -->
+  <div id="debugOverlay"></div>
 
   <!-- ============ PANTALLA DE INICIO ============ -->
   <div class="overlay" id="startScreen">
@@ -169,7 +179,6 @@
       <div>🏆 Mejor Puntaje: <span class="highlight" id="menuHighScore">0</span> m</div>
     </div>
     <div class="buttons-row">
-      <!-- FIX CRÍTICO: onclick inline como método principal -->
       <button class="btn green" id="startBtn" onclick="handleStart()" type="button">▶ JUGAR</button>
       <button class="btn yellow" id="helpBtn" onclick="handleHelp()" type="button">❓ AYUDA</button>
     </div>
@@ -177,7 +186,7 @@
 
   <!-- ============ PANTALLA DE AYUDA ============ -->
   <div class="overlay hidden" id="helpScreen">
-    <div class="title" style="font-size:1.6em;">📖 CÓMO JUGAR</div>
+    <div class="title" style="font-size:1.6em;"> CÓMO JUGAR</div>
 
     <div class="help-container">
       <div class="help-section">
@@ -192,7 +201,7 @@
           <div class="control-text"><strong>Tap / Click:</strong> Salto corto. Úsalo para obstáculos pequeños.</div>
         </div>
         <div class="control-box">
-          <div class="control-icon">👆👆</div>
+          <div class="control-icon">👆</div>
           <div class="control-text"><strong>Doble Tap:</strong> Salto largo. Ideal para obstáculos grandes o grupos.</div>
         </div>
         <div class="control-box">
@@ -210,17 +219,17 @@
             <div class="desc">Agua corriendo. ¡Salta!</div>
           </div>
           <div class="obstacle-item">
-            <div class="emoji"></div>
+            <div class="emoji">💧</div>
             <div class="name">Charco</div>
             <div class="desc">Bajo y ancho. Salto largo.</div>
           </div>
           <div class="obstacle-item">
-            <div class="emoji">️</div>
+            <div class="emoji">🕳️</div>
             <div class="name">Alcantarilla</div>
             <div class="desc">Abertura peligrosa.</div>
           </div>
           <div class="obstacle-item">
-            <div class="emoji"></div>
+            <div class="emoji">⚫</div>
             <div class="name">Bache</div>
             <div class="desc">Hoyo en el suelo.</div>
           </div>
@@ -231,7 +240,7 @@
         <h3>⭐ Puntuación</h3>
         <p>Cada metro recorrido suma puntos. La velocidad aumenta progresivamente, ¡así que mantente alerta!</p>
         <div class="tip-box">
-          <p>💡 <strong>Tip:</strong> Los obstáculos aparecen al ritmo de la música (120 BPM). ¡Siente el beat para anticipar los saltos!</p>
+          <p> <strong>Tip:</strong> Los obstáculos aparecen al ritmo de la música (120 BPM). ¡Siente el beat para anticipar los saltos!</p>
         </div>
       </div>
 
@@ -247,7 +256,7 @@
       <div class="help-section">
         <h3>🏆 Consejos Pro</h3>
         <ul>
-          <li>🎵 Escucha el ritmo: los obstáculos siguen el beat.</li>
+          <li> Escucha el ritmo: los obstáculos siguen el beat.</li>
           <li>⏱️ La velocidad aumenta con el tiempo, ¡no te confíes!</li>
           <li>🦘 Usa el doble salto para obstáculos difíciles.</li>
           <li>📺 Guarda tu revivir para cuando lleves un buen puntaje.</li>
@@ -260,15 +269,15 @@
 
   <!-- ============ PANTALLA DE GAME OVER ============ -->
   <div class="overlay centered hidden" id="gameOverScreen">
-    <div class="emoji">💥🌊</div>
+    <div class="emoji">💥</div>
     <div class="title" style="font-size:1.6em;">¡TE CAÍSTE!</div>
     <div class="stats">
       <div>Distancia: <span class="highlight" id="finalScore">0</span> m</div>
       <div>Mejor: <span class="highlight" id="finalHighScore">0</span> m</div>
-      <div id="newRecord" class="hidden" style="color:#ffd700; font-size:1.1em; margin-top:8px;">🎉 ¡NUEVO RÉCORD! 🎉</div>
+      <div id="newRecord" class="hidden" style="color:#ffd700; font-size:1.1em; margin-top:8px;"> ¡NUEVO RÉCORD! 🎉</div>
     </div>
     <button class="btn blue hidden" id="reviveBtn" onclick="handleRevive()" type="button">📺 REVIVIR</button>
-    <button class="btn" id="restartBtn" onclick="handleRestart()" type="button"> REINTENTAR</button>
+    <button class="btn" id="restartBtn" onclick="handleRestart()" type="button">🔄 REINTENTAR</button>
   </div>
 
   <!-- ============ PANTALLA DE ANUNCIO ============ -->
@@ -282,6 +291,19 @@
 
 <script>
 // ============================================================
+// DEBUG HELPER
+// ============================================================
+function debug(msg) {
+  console.log('[DEBUG]', msg);
+  const el = document.getElementById('debugOverlay');
+  if (el) {
+    el.textContent = msg;
+    el.classList.add('show');
+    setTimeout(() => el.classList.remove('show'), 3000);
+  }
+}
+
+// ============================================================
 // TELEGRAM WEBAPP INIT
 // ============================================================
 const tg = window.Telegram?.WebApp;
@@ -292,7 +314,8 @@ if (tg) {
     tg.setHeaderColor('#1a1a2e');
     tg.setBackgroundColor('#1a1a2e');
     tg.enableClosingConfirmation();
-  } catch(e){ console.warn('Telegram init error:', e); }
+    debug('Telegram OK');
+  } catch(e){ debug('Telegram error: ' + e.message); }
 }
 
 // ============================================================
@@ -399,7 +422,8 @@ function initAudio() {
     masterGain = audioCtx.createGain();
     masterGain.gain.value = 0.4;
     masterGain.connect(audioCtx.destination);
-  } catch(e) { console.warn('Audio no disponible'); }
+    debug('Audio OK');
+  } catch(e) { debug('Audio error: ' + e.message); }
 }
 
 function playBeat(time, type) {
@@ -451,12 +475,14 @@ function scheduleMusic() {
 }
 
 function startMusic() {
+  debug('startMusic called');
   initAudio();
-  if (!audioCtx) return;
+  if (!audioCtx) { debug('No audioCtx'); return; }
   if (audioCtx.state === 'suspended') audioCtx.resume();
   musicPlaying = true;
   musicStartTime = audioCtx.currentTime + 0.1;
   scheduleMusic();
+  debug('Music started');
 }
 
 function stopMusic() {
@@ -493,7 +519,7 @@ function playSFX(type) {
 }
 
 // ============================================================
-// CONTROLES DEL JUEGO (SOLO CUANDO CANVAS ESTÁ ACTIVO)
+// CONTROLES DEL JUEGO
 // ============================================================
 let lastTapTime = 0;
 const DOUBLE_TAP_DELAY = 250;
@@ -520,7 +546,6 @@ function handleJump(isLong) {
   }
 }
 
-// FIX: listener solo en canvas, y solo funciona cuando canvas tiene clase 'active'
 canvas.addEventListener('touchstart', (e) => {
   if (!canvas.classList.contains('active')) return;
   e.preventDefault();
@@ -556,6 +581,7 @@ document.addEventListener('keydown', (e) => {
 // LÓGICA DEL JUEGO
 // ============================================================
 function resetGame() {
+  debug('resetGame called');
   player.groundY = H - 120;
   player.y = player.groundY - player.h;
   player.vy = 0;
@@ -573,6 +599,7 @@ function resetGame() {
   invulnerableTimer = 0;
   lastBeatTime = performance.now();
   initEnvironment();
+  debug('resetGame done');
 }
 
 function spawnObstacle() {
@@ -836,10 +863,10 @@ function drawPlayer() {
 // GAME OVER
 // ============================================================
 function gameOver() {
+  debug('gameOver called');
   gameState = STATE.GAMEOVER;
   stopMusic();
   playSFX('hit');
-  // FIX: desactivar canvas
   canvas.classList.remove('active');
 
   for (let i = 0; i < 20; i++) {
@@ -868,80 +895,111 @@ function gameOver() {
   document.getElementById('reviveBtn').classList.toggle('hidden', !canRevive);
   document.getElementById('hud').classList.add('hidden');
   document.getElementById('gameOverScreen').classList.remove('hidden');
+  debug('gameOver done');
 }
 
 // ============================================================
-// HANDLERS DE BOTONES (FUNCIONES GLOBALES para onclick inline)
+// HANDLERS DE BOTONES CON TRY/CATCH
 // ============================================================
 function handleStart() {
-  console.log('▶ JUGAR presionado');
-  resetGame();
-  gameState = STATE.PLAYING;
-  // FIX: activar canvas para recibir toques
-  canvas.classList.add('active');
-  document.getElementById('startScreen').classList.add('hidden');
-  document.getElementById('hud').classList.remove('hidden');
-  document.getElementById('highScoreDisplay').textContent = highScore;
-  startMusic();
-  if (tg?.HapticFeedback) {
-    try { tg.HapticFeedback.impactOccurred('medium'); } catch(e){}
+  try {
+    debug('▶ handleStart called');
+    resetGame();
+    gameState = STATE.PLAYING;
+    canvas.classList.add('active');
+    document.getElementById('startScreen').classList.add('hidden');
+    document.getElementById('hud').classList.remove('hidden');
+    document.getElementById('highScoreDisplay').textContent = highScore;
+    debug('UI updated');
+    startMusic();
+    if (tg?.HapticFeedback) {
+      try { tg.HapticFeedback.impactOccurred('medium'); } catch(e){}
+    }
+    debug('▶ handleStart done - gameState=' + gameState);
+  } catch(e) {
+    debug('ERROR en handleStart: ' + e.message);
+    console.error('handleStart error:', e);
   }
 }
 
 function handleHelp() {
-  console.log('❓ AYUDA presionado');
-  document.getElementById('startScreen').classList.add('hidden');
-  document.getElementById('helpScreen').classList.remove('hidden');
+  try {
+    debug(' handleHelp called');
+    document.getElementById('startScreen').classList.add('hidden');
+    document.getElementById('helpScreen').classList.remove('hidden');
+    debug(' handleHelp done');
+  } catch(e) {
+    debug('ERROR en handleHelp: ' + e.message);
+  }
 }
 
 function handleCloseHelp() {
-  console.log('✅ ENTENDIDO presionado');
-  document.getElementById('helpScreen').classList.add('hidden');
-  document.getElementById('startScreen').classList.remove('hidden');
+  try {
+    debug('✅ handleCloseHelp called');
+    document.getElementById('helpScreen').classList.add('hidden');
+    document.getElementById('startScreen').classList.remove('hidden');
+    debug('✅ handleCloseHelp done');
+  } catch(e) {
+    debug('ERROR en handleCloseHelp: ' + e.message);
+  }
 }
 
 function handleRestart() {
-  console.log(' REINTENTAR presionado');
-  if (interstitialReady) {
-    interstitialReady = false;
-    showInterstitial(() => actuallyReturnToMenu());
-  } else {
-    actuallyReturnToMenu();
+  try {
+    debug('🔄 handleRestart called');
+    if (interstitialReady) {
+      interstitialReady = false;
+      showInterstitial(() => actuallyReturnToMenu());
+    } else {
+      actuallyReturnToMenu();
+    }
+    debug('🔄 handleRestart done');
+  } catch(e) {
+    debug('ERROR en handleRestart: ' + e.message);
   }
 }
 
 function handleRevive() {
-  console.log('📺 REVIVIR presionado');
-  showRewardedAd(() => {
-    gameState = STATE.PLAYING;
-    canRevive = false;
-    isInvulnerable = true;
-    invulnerableTimer = 3000;
-    player.y = player.groundY - player.h;
-    player.vy = 0;
-    player.grounded = true;
-    obstacles = obstacles.filter(ob => ob.x > player.x + 200);
-    // FIX: reactivar canvas
-    canvas.classList.add('active');
-    document.getElementById('gameOverScreen').classList.add('hidden');
-    document.getElementById('hud').classList.remove('hidden');
-    startMusic();
-    playSFX('revive');
-    if (tg?.HapticFeedback) {
-      try { tg.HapticFeedback.notificationOccurred('success'); } catch(e){}
-    }
-  });
+  try {
+    debug(' handleRevive called');
+    showRewardedAd(() => {
+      gameState = STATE.PLAYING;
+      canRevive = false;
+      isInvulnerable = true;
+      invulnerableTimer = 3000;
+      player.y = player.groundY - player.h;
+      player.vy = 0;
+      player.grounded = true;
+      obstacles = obstacles.filter(ob => ob.x > player.x + 200);
+      canvas.classList.add('active');
+      document.getElementById('gameOverScreen').classList.add('hidden');
+      document.getElementById('hud').classList.remove('hidden');
+      startMusic();
+      playSFX('revive');
+      if (tg?.HapticFeedback) {
+        try { tg.HapticFeedback.notificationOccurred('success'); } catch(e){}
+      }
+      debug('📺 Revive done');
+    });
+  } catch(e) {
+    debug('ERROR en handleRevive: ' + e.message);
+  }
 }
 
 function actuallyReturnToMenu() {
-  gameState = STATE.MENU;
-  stopMusic();
-  // FIX: desactivar canvas
-  canvas.classList.remove('active');
-  document.getElementById('gameOverScreen').classList.add('hidden');
-  document.getElementById('hud').classList.add('hidden');
-  document.getElementById('menuHighScore').textContent = highScore;
-  document.getElementById('startScreen').classList.remove('hidden');
+  try {
+    debug('actuallyReturnToMenu called');
+    gameState = STATE.MENU;
+    stopMusic();
+    canvas.classList.remove('active');
+    document.getElementById('gameOverScreen').classList.add('hidden');
+    document.getElementById('hud').classList.add('hidden');
+    document.getElementById('menuHighScore').textContent = highScore;
+    document.getElementById('startScreen').classList.remove('hidden');
+    debug('actuallyReturnToMenu done');
+  } catch(e) {
+    debug('ERROR en actuallyReturnToMenu: ' + e.message);
+  }
 }
 
 // ============================================================
@@ -957,17 +1015,17 @@ function showRewardedAd(onComplete) {
         document.getElementById('adScreen').classList.add('hidden');
         onComplete();
       }).catch((err) => {
-        console.warn('Error en anuncio rewarded:', err);
+        debug('Error ad: ' + err.message);
         document.getElementById('adScreen').classList.add('hidden');
         onComplete();
       });
     } catch (err) {
-      console.warn('Error al llamar show_12035176:', err);
+      debug('Error ad: ' + err.message);
       document.getElementById('adScreen').classList.add('hidden');
       onComplete();
     }
   } else {
-    console.warn('SDK de Monetag no disponible');
+    debug('Monetag no disponible');
     setTimeout(() => {
       document.getElementById('adScreen').classList.add('hidden');
       onComplete();
@@ -985,12 +1043,12 @@ function showInterstitial(onComplete) {
         document.getElementById('adScreen').classList.add('hidden');
         onComplete();
       }).catch((err) => {
-        console.warn('Error en interstitial:', err);
+        debug('Error interstitial: ' + err.message);
         document.getElementById('adScreen').classList.add('hidden');
         onComplete();
       });
     } catch (err) {
-      console.warn('Error al llamar show_12035176:', err);
+      debug('Error interstitial: ' + err.message);
       document.getElementById('adScreen').classList.add('hidden');
       onComplete();
     }
@@ -1021,9 +1079,9 @@ player.y = player.groundY - player.h;
 document.getElementById('menuHighScore').textContent = highScore;
 requestAnimationFrame(gameLoop);
 
-console.log('%c️ Saltar la Canaleta 🏃‍♂️', 'font-size: 20px; color: #ffd700; font-weight: bold;');
-console.log('✅ Botones corregidos - Monetag Zone: 12035176');
-console.log('Canvas activo solo durante el juego');
+debug('App iniciada');
+console.log('%c🌧️ Saltar la Canaleta 🏃‍♂️', 'font-size: 20px; color: #ffd700; font-weight: bold;');
+console.log('✅ Debug activo - Monetag Zone: 12035176');
 </script>
 </body>
 </html>
